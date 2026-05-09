@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-newapp
+spec:
+  type: LoadBalancer
+  selector:
+    app: hello-newapp
+  ports:
+    - port: 8000
+      targetPort: 8000
