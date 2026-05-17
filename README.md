@@ -10,16 +10,16 @@ This version runs on port `8000`, so the Dockerfile, Kubernetes files, and Helm 
 
 ## Project structure
 
-- `app/` has the Flask app, Dockerfile, and Python requirements.
+- `app.py`, `Dockerfile`, and `requirements.txt` are in the root folder.
 - `k8s/` has the raw Kubernetes YAML files I used for testing before Helm.
 - `helmchart/hello-newapp/` has the Helm chart.
 
 ## Docker
 
-Build the image from the `app` folder:
+Build the image from the project root:
 
 ```bash
-docker build -t vladxgx/hello-newapp:1.0.0 app
+docker build -t vladxgx/hello-newapp:1.0.0 .
 ```
 
 Push it to Docker Hub:
