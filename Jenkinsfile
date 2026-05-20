@@ -28,7 +28,7 @@ podTemplate(cloud: 'kubernetes', containers: [
         stage('Hello') {
             container('docker') {
               sh "docker build -t $appname ."
-              sh "docker push $appname:$env.BUILD_NUMBER"
+              sh "docker push $appimage:$env.BUILD_NUMBER"
             }
         } //end hello
     }
