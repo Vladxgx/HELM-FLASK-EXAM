@@ -18,5 +18,5 @@ jobs:
 
       - name: Verify Trivy
         run: trivy --version
-      - name: Trivy Scan
-        run: trivy fs .
+      - name: Run Trivy config scan
+        run: trivy config .
