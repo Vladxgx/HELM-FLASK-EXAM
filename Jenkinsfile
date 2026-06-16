@@ -67,19 +67,26 @@ pipeline {
             steps {
                 sh '''
                     if command -v helm >/dev/null 2>&1; then
-                        helm template hello-newapp ./helmchart/hello-newapp \
-                            --set image.repository="$IMAGE_NAME" \
-                            --set image.tag="$IMAGE_TAG" \
-                            > devops-template.yaml
+                        HELM_BIN=helm
                     else
-                        docker run --rm \
-                            -v "$PWD":/work \
-                            -w /work \
-                            alpine/helm:3.15.4 template hello-newapp ./helmchart/hello-newapp \
-                            --set image.repository="$IMAGE_NAME" \
-                            --set image.tag="$IMAGE_TAG" \
-                            > devops-template.yaml
+                        mkdir -p .tools
+                        case "$(uname -m)" in
+                            x86_64) HELM_ARCH=amd64 ;;
+                            aarch64|arm64) HELM_ARCH=arm64 ;;
+                            *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;;
+                        esac
+
+                        curl --fail --silent --show-error --location \
+                            "https://get.helm.sh/helm-v3.15.4-linux-${HELM_ARCH}.tar.gz" \
+                            --output .tools/helm.tar.gz
+                        tar -xzf .tools/helm.tar.gz -C .tools
+                        HELM_BIN="$PWD/.tools/linux-${HELM_ARCH}/helm"
                     fi
+
+                    "$HELM_BIN" template hello-newapp ./helmchart/hello-newapp \
+                        --set image.repository="$IMAGE_NAME" \
+                        --set image.tag="$IMAGE_TAG" \
+                        > devops-template.yaml
                 '''
             }
         }
