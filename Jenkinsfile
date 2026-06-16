@@ -30,7 +30,7 @@ pipeline {
                     steps {
                         sh '''
                             echo "Running mocked lint check"
-                            python -m py_compile app.py
+                            python3 -m py_compile app.py || python -m py_compile app.py
                         '''
                     }
                 }
@@ -104,20 +104,24 @@ pipeline {
     post {
         success {
             sh '''
+                payload=$(printf '{"text":"SUCCESS: %s #%s deployed %s:%s to %s"}' \
+                    "$JOB_NAME" "$BUILD_NUMBER" "$IMAGE_NAME" "$IMAGE_TAG" "$TARGET_ENV")
                 curl --fail --silent --show-error \
                     -X POST \
                     -H 'Content-Type: application/json' \
-                    --data "{\"text\":\"SUCCESS: ${JOB_NAME} #${BUILD_NUMBER} deployed ${IMAGE_NAME}:${IMAGE_TAG} to ${TARGET_ENV}\"}" \
+                    --data "$payload" \
                     "$SLACK_WEBHOOK_URL"
             '''
         }
 
         failure {
             sh '''
+                payload=$(printf '{"text":"FAILURE: %s #%s for %s:%s in %s. See %s"}' \
+                    "$JOB_NAME" "$BUILD_NUMBER" "$IMAGE_NAME" "$IMAGE_TAG" "$TARGET_ENV" "$BUILD_URL")
                 curl --fail --silent --show-error \
                     -X POST \
                     -H 'Content-Type: application/json' \
-                    --data "{\"text\":\"FAILURE: ${JOB_NAME} #${BUILD_NUMBER} for ${IMAGE_NAME}:${IMAGE_TAG} in ${TARGET_ENV}. See ${BUILD_URL}\"}" \
+                    --data "$payload" \
                     "$SLACK_WEBHOOK_URL"
             '''
         }
