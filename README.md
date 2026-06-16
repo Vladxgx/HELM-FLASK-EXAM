@@ -1,126 +1,45 @@
 # hello-newapp
 
-Small Flask app packaged with Docker, Kubernetes manifests, and a Helm chart.
+`hello-newapp` is a Flask application packaged with Docker and deployed through
+Jenkins, Helm, and ArgoCD.
 
-The app used here is the fallback app from the teacher repo:
+The application:
 
-https://github.com/elevy99927/hello-newapp/blob/argo-advance/app.py
+- Runs on port `8000`.
+- Exposes the application at `/`.
+- Exposes Prometheus metrics at `/metrics`.
+- Uses the Docker Hub image `vladxgx/hello-newapp`.
 
-This version runs on port `8000`, so the Dockerfile, Kubernetes files, and Helm chart all use port `8000`.
+## CI/CD flow
 
-## Project structure
+Jenkins checks out the application, runs simple lint and security checks,
+builds and pushes the Docker image, and renders the Helm chart. It then commits
+the rendered `devops-template.yaml` to the selected `dev`, `qa`, or `prod`
+folder in `Vladxgx/argo-git-ops`.
 
-- `app.py`, `Dockerfile`, and `requirements.txt` are in the root folder.
-- `k8s/` has the raw Kubernetes YAML files I used for testing before Helm.
-- `helmchart/hello-newapp/` has the Helm chart.
+Jenkins sends success and failure messages directly to Slack using `curl` and
+the secret text credential `slack-webhook-url`. Docker Hub and GitHub
+credentials are also stored in Jenkins and are not committed to this repo.
 
-## Docker
-
-Build the image from the project root:
-
-```bash
-docker build -t vladxgx/hello-newapp:1.0.0 .
-```
-
-Push it to Docker Hub:
-
-```bash
-docker push vladxgx/hello-newapp:1.0.0
-```
-
-## Kubernetes
-
-Apply the regular Kubernetes manifests:
+## Run locally
 
 ```bash
-kubectl apply -f k8s/deployment.yaml
-kubectl apply -f k8s/service.yaml
+docker build -t vladxgx/hello-newapp:local .
+docker run -p 8000:8000 vladxgx/hello-newapp:local
+curl http://localhost:8000/metrics
 ```
 
-Check the resources:
+## Render the Helm chart
 
 ```bash
-kubectl get deployment
-kubectl get service
-kubectl get pods
+helm template hello-newapp ./helmchart/hello-newapp --set image.tag=local
 ```
 
-## Helm
+The chart deploys a `ClusterIP` Service on port `8000` and includes Prometheus
+scrape annotations for `/metrics`.
 
-The Helm chart is in:
+## Terraform
 
-```bash
-./helmchart/hello-newapp
-```
+The Terraform part of the project is maintained separately:
 
-Lint the chart:
-
-```bash
-helm lint ./helmchart/hello-newapp
-```
-
-Render the templates locally:
-
-```bash
-helm template hello-release ./helmchart/hello-newapp
-```
-
-Install the chart:
-
-```bash
-helm install hello-release ./helmchart/hello-newapp
-```
-
-Upgrade the release after changing values or templates:
-
-```bash
-helm upgrade hello-release ./helmchart/hello-newapp
-```
-
-Check Helm history:
-
-```bash
-helm history hello-release
-```
-
-Rollback to revision 1:
-
-```bash
-helm rollback hello-release 1
-```
-
-Uninstall the release:
-
-```bash
-helm uninstall hello-release
-```
-
-## Values
-
-Main values are in `helmchart/hello-newapp/values.yaml`.
-
-The chart values control:
-
-- image repository
-- image tag
-- replica count
-- service type
-- service port
-- service target port
-- resources
-
-Current image:
-
-```text
-vladxgx/hello-newapp:1.0.0
-```
-
-Current app port:
-
-```text
-8000
-```
-
-## Secrets
-
-No real AWS keys are committed. The `.env.example` file only has placeholder values.
+https://github.com/Vladxgx/TF-EXAM

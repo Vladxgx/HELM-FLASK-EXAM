@@ -3,7 +3,11 @@
 {{- end }}
 
 {{- define "hello-newapp.fullname" -}}
-{{ .Release.Name }}-{{ include "hello-newapp.name" . }}
+{{- if contains .Chart.Name .Release.Name }}
+{{- .Release.Name }}
+{{- else }}
+{{- printf "%s-%s" .Release.Name (include "hello-newapp.name" .) }}
+{{- end }}
 {{- end }}
 
 {{- define "hello-newapp.labels" -}}

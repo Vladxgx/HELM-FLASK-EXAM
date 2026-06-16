@@ -11,12 +11,22 @@ import threading
 
 app = Flask(__name__)
 
+REQUEST_COUNT = Counter(
+    'hello_newapp_requests_total',
+    'Total requests handled by hello-newapp'
+)
+
 APP_INFO = {
     "git_repo": "https://github.com/elevy99927/hello-newapp/tree/argo-solution",
     "git_ops": "https://github.com/elevy99927/argo-demo-repo/tree/application",
     "author": "Eyal Levy",
     "email": "eyal@levys.co.il",
 }
+
+
+@app.before_request
+def count_request():
+    REQUEST_COUNT.inc()
 
 
 @app.route('/')
@@ -55,7 +65,7 @@ def index():
 
 @app.route('/metrics')
 def metrics():
-    return Response(generate_latest(REGISTRY), mimetype=CONTENT_TYPE_LATEST)
+    return Response(generate_latest(REGISTRY), content_type=CONTENT_TYPE_LATEST)
 
 # 1. Counter
 http_requests_total = Counter(
