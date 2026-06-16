@@ -66,10 +66,20 @@ pipeline {
         stage('Helm Template') {
             steps {
                 sh '''
-                    helm template hello-newapp ./helmchart/hello-newapp \
-                        --set image.repository="$IMAGE_NAME" \
-                        --set image.tag="$IMAGE_TAG" \
-                        > devops-template.yaml
+                    if command -v helm >/dev/null 2>&1; then
+                        helm template hello-newapp ./helmchart/hello-newapp \
+                            --set image.repository="$IMAGE_NAME" \
+                            --set image.tag="$IMAGE_TAG" \
+                            > devops-template.yaml
+                    else
+                        docker run --rm \
+                            -v "$PWD":/work \
+                            -w /work \
+                            alpine/helm:3.15.4 template hello-newapp ./helmchart/hello-newapp \
+                            --set image.repository="$IMAGE_NAME" \
+                            --set image.tag="$IMAGE_TAG" \
+                            > devops-template.yaml
+                    fi
                 '''
             }
         }
