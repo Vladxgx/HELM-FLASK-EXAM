@@ -126,14 +126,7 @@ pipeline {
             steps {
                 sh '''
                     MESSAGE="Jenkins pipeline succeeded\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG"
-                    PAYLOAD="{
-                        \"attachmets\": [
-                            {
-                                \"color\": \"good\",
-                                \"text\": \"$MESSAGE\"
-                            }
-                        ]
-                    }"
+                    PAYLOAD="{\\"attachments\\":[{\\"color\\":\\"good\\",\\"text\\":\\"$MESSAGE\\"}]}"
                     curl --fail --silent --show-error \
                         -X POST \
                         -H 'Content-Type: application/json' \
