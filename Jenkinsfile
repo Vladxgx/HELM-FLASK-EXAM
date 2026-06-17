@@ -26,21 +26,22 @@ pipeline {
 
         stage('Parallel Checks') {
             parallel {
-                stage('Lint') {
+                stage('Flake8 Lint') {
                     steps {
                         sh '''
-                            echo "Running mocked lint check"
-                            python3 -m py_compile app.py || python -m py_compile app.py
+                            echo "Running Flake8 lint"
+                            python3 -m pip install --quiet --target .tools/flake8 flake8
+                            PYTHONPATH=.tools/flake8 python3 -m flake8 app.py --select=E9,F63,F7,F82
                         '''
                     }
                 }
 
-                stage('Security Scan') {
+                stage('Bandit Scan') {
                     steps {
                         sh '''
-                            echo "Running mocked security scan"
-                            test -s requirements.txt
-                            test -s Dockerfile
+                            echo "Running Bandit Python security scan"
+                            python3 -m pip install --quiet --target .tools/bandit bandit
+                            PYTHONPATH=.tools/bandit python3 -m bandit -r app.py --severity-level high
                         '''
                     }
                 }
@@ -50,6 +51,21 @@ pipeline {
         stage('Docker Build') {
             steps {
                 sh 'docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .'
+            }
+        }
+
+        stage('Trivy Image Scan') {
+            steps {
+                sh '''
+                    echo "Running Trivy image scan"
+                    docker run --rm \
+                        -v /var/run/docker.sock:/var/run/docker.sock \
+                        aquasec/trivy:0.58.1 image \
+                        --severity HIGH,CRITICAL \
+                        --ignore-unfixed \
+                        --exit-code 0 \
+                        "${IMAGE_NAME}:${IMAGE_TAG}"
+                '''
             }
         }
 
@@ -66,24 +82,15 @@ pipeline {
         stage('Helm Template') {
             steps {
                 sh '''
-                    if command -v helm >/dev/null 2>&1; then
-                        HELM_BIN=helm
-                    else
-                        mkdir -p .tools
-                        case "$(uname -m)" in
-                            x86_64) HELM_ARCH=amd64 ;;
-                            aarch64|arm64) HELM_ARCH=arm64 ;;
-                            *) echo "Unsupported architecture: $(uname -m)" && exit 1 ;;
-                        esac
+                    echo "Downloading Helm"
+                    mkdir -p .tools
+                    curl --fail --silent --show-error --location \
+                        https://get.helm.sh/helm-v3.15.4-linux-amd64.tar.gz \
+                        --output .tools/helm.tar.gz
+                    tar -xzf .tools/helm.tar.gz -C .tools
 
-                        curl --fail --silent --show-error --location \
-                            "https://get.helm.sh/helm-v3.15.4-linux-${HELM_ARCH}.tar.gz" \
-                            --output .tools/helm.tar.gz
-                        tar -xzf .tools/helm.tar.gz -C .tools
-                        HELM_BIN="$PWD/.tools/linux-${HELM_ARCH}/helm"
-                    fi
-
-                    "$HELM_BIN" template hello-newapp ./helmchart/hello-newapp \
+                    echo "Rendering Helm template"
+                    .tools/linux-amd64/helm template hello-newapp ./helmchart/hello-newapp \
                         --set image.repository="$IMAGE_NAME" \
                         --set image.tag="$IMAGE_TAG" \
                         > devops-template.yaml
@@ -121,24 +128,24 @@ pipeline {
     post {
         success {
             sh '''
-                payload=$(printf '{"text":"SUCCESS: %s #%s deployed %s:%s to %s"}' \
-                    "$JOB_NAME" "$BUILD_NUMBER" "$IMAGE_NAME" "$IMAGE_TAG" "$TARGET_ENV")
+                MESSAGE="Jenkins pipeline succeeded\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG"
+                PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
                 curl --fail --silent --show-error \
                     -X POST \
                     -H 'Content-Type: application/json' \
-                    --data "$payload" \
+                    --data "$PAYLOAD" \
                     "$SLACK_WEBHOOK_URL"
             '''
         }
 
         failure {
             sh '''
-                payload=$(printf '{"text":"FAILURE: %s #%s for %s:%s in %s. See %s"}' \
-                    "$JOB_NAME" "$BUILD_NUMBER" "$IMAGE_NAME" "$IMAGE_TAG" "$TARGET_ENV" "$BUILD_URL")
+                MESSAGE="Jenkins pipeline failed\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG\\nURL: $BUILD_URL"
+                PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
                 curl --fail --silent --show-error \
                     -X POST \
                     -H 'Content-Type: application/json' \
-                    --data "$payload" \
+                    --data "$PAYLOAD" \
                     "$SLACK_WEBHOOK_URL"
             '''
         }
