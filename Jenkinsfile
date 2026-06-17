@@ -143,7 +143,7 @@ pipeline {
                 stage('Slack Failure Notification') {
                     sh '''
                         MESSAGE="Jenkins pipeline failed\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG\\nURL: $BUILD_URL"
-                        PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
+                        PAYLOAD="{\\"attachments\\":[{\\"color\\":\\"danger\\",\\"text\\":\\"$MESSAGE\\"}]}"
                         curl --fail --silent --show-error \
                             -X POST \
                             -H 'Content-Type: application/json' \
