@@ -121,31 +121,37 @@ pipeline {
                 '''
             }
         }
+
+        stage('Slack Success Notification') {
+            steps {
+                sh '''
+                    MESSAGE="Jenkins pipeline succeeded\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG"
+                    PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
+                    curl --fail --silent --show-error \
+                        -X POST \
+                        -H 'Content-Type: application/json' \
+                        --data "$PAYLOAD" \
+                        "$SLACK_WEBHOOK_URL"
+                '''
+            }
+        }
     }
 
     post {
-        success {
-            sh '''
-                MESSAGE="Jenkins pipeline succeeded\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG"
-                PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
-                curl --fail --silent --show-error \
-                    -X POST \
-                    -H 'Content-Type: application/json' \
-                    --data "$PAYLOAD" \
-                    "$SLACK_WEBHOOK_URL"
-            '''
-        }
-
         failure {
-            sh '''
-                MESSAGE="Jenkins pipeline failed\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG\\nURL: $BUILD_URL"
-                PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
-                curl --fail --silent --show-error \
-                    -X POST \
-                    -H 'Content-Type: application/json' \
-                    --data "$PAYLOAD" \
-                    "$SLACK_WEBHOOK_URL"
-            '''
+            script {
+                stage('Slack Failure Notification') {
+                    sh '''
+                        MESSAGE="Jenkins pipeline failed\\nJob: $JOB_NAME\\nBuild: #$BUILD_NUMBER\\nEnvironment: $TARGET_ENV\\nImage: $IMAGE_NAME:$IMAGE_TAG\\nURL: $BUILD_URL"
+                        PAYLOAD="{\\"text\\":\\"$MESSAGE\\"}"
+                        curl --fail --silent --show-error \
+                            -X POST \
+                            -H 'Content-Type: application/json' \
+                            --data "$PAYLOAD" \
+                            "$SLACK_WEBHOOK_URL"
+                    '''
+                }
+            }
         }
     }
 }
