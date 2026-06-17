@@ -1,3 +1,5 @@
+@Library('mySharedLib') _
+
 pipeline {
     agent any
 
@@ -21,6 +23,9 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                script {
+                    sourceControl.gitStatus()
+                }
             }
         }
 
@@ -28,21 +33,17 @@ pipeline {
             parallel {
                 stage('Flake8 Lint') {
                     steps {
-                        sh '''
-                            echo "Running Flake8 lint"
-                            python3 -m pip install --quiet --target .tools/flake8 flake8
-                            PYTHONPATH=.tools/flake8 python3 -m flake8 app.py --select=E9,F63,F7,F82
-                        '''
+                        script {
+                            tests.flake8Test()
+                        }
                     }
                 }
 
                 stage('Bandit Scan') {
                     steps {
-                        sh '''
-                            echo "Running Bandit Python security scan"
-                            python3 -m pip install --quiet --target .tools/bandit bandit
-                            PYTHONPATH=.tools/bandit python3 -m bandit -r app.py --severity-level high
-                        '''
+                        script {
+                            tests.banditTest()
+                        }
                     }
                 }
             }
@@ -50,22 +51,17 @@ pipeline {
 
         stage('Docker Build') {
             steps {
-                sh 'docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .'
+                script {
+                    dockering.imageBuild()
+                }
             }
         }
 
         stage('Trivy Image Scan') {
             steps {
-                sh '''
-                    echo "Running Trivy image scan"
-                    docker run --rm \
-                        -v /var/run/docker.sock:/var/run/docker.sock \
-                        aquasec/trivy:0.58.1 image \
-                        --severity HIGH,CRITICAL \
-                        --ignore-unfixed \
-                        --exit-code 0 \
-                        "${IMAGE_NAME}:${IMAGE_TAG}"
-                '''
+                script {
+                    tests.trivyTest()
+                }
             }
         }
 
@@ -74,8 +70,10 @@ pipeline {
                 sh '''
                     echo "$DOCKERHUB_CREDENTIALS_PSW" |
                         docker login -u "$DOCKERHUB_CREDENTIALS_USR" --password-stdin
-                    docker push "${IMAGE_NAME}:${IMAGE_TAG}"
                 '''
+                script {
+                    dockering.imagePush()
+                }
             }
         }
 
