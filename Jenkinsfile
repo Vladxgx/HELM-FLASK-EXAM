@@ -49,6 +49,14 @@ pipeline {
             }
         }
 
+        stage('Trivy Base Image Scan') {
+            steps {
+                script {
+                    tests.trivyBaseImageTest()
+                }
+            }
+        }
+
         stage('Docker Build') {
             steps {
                 script {

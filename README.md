@@ -19,8 +19,9 @@ The pipeline:
 
 - Checks out the app repo.
 - Runs Python compile check and Bandit scan.
+- Runs a Trivy scan on the Docker base image.
 - Builds `vladxgx/hello-newapp:${BUILD_NUMBER}`.
-- Runs a Trivy image scan.
+- Runs a Trivy scan on the built app image.
 - Pushes the image to Docker Hub.
 - Renders the Helm chart into `devops-template.yaml`.
 - Updates the selected `dev`, `qa`, or `prod` folder in `Vladxgx/argo-git-ops`.
