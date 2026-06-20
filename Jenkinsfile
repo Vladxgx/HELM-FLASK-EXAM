@@ -46,13 +46,13 @@ pipeline {
                         }
                     }
                 }
-            }
-        }
 
-        stage('Trivy Base Image Scan') {
-            steps {
-                script {
-                    tests.trivyBaseImageTest()
+                stage('Trivy Base Image Scan') {
+                    steps {
+                        script {
+                            tests.trivyBaseImageTest()
+                        }
+                    }
                 }
             }
         }
