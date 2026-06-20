@@ -1,7 +1,7 @@
 # hello-newapp
 
-`hello-newapp` is a Flask application packaged with Docker and deployed through
-Jenkins, Helm, and ArgoCD.
+`hello-newapp` is a small Flask application packaged with Docker and deployed
+through Jenkins, Helm, ArgoCD, and GitOps.
 
 The application:
 
@@ -12,14 +12,25 @@ The application:
 
 ## CI/CD flow
 
-Jenkins checks out the application, runs simple lint and security checks,
-builds and pushes the Docker image, and renders the Helm chart. It then commits
-the rendered `devops-template.yaml` to the selected `dev`, `qa`, or `prod`
-folder in `Vladxgx/argo-git-ops`.
+Jenkins uses my shared library from `Vladxgx/mySharedLib` for the basic Docker
+and test steps.
+
+The pipeline:
+
+- Checks out the app repo.
+- Runs Python compile check and Bandit scan.
+- Builds `vladxgx/hello-newapp:${BUILD_NUMBER}`.
+- Runs a Trivy image scan.
+- Pushes the image to Docker Hub.
+- Renders the Helm chart into `devops-template.yaml`.
+- Updates the selected `dev`, `qa`, or `prod` folder in `Vladxgx/argo-git-ops`.
 
 Jenkins sends success and failure messages directly to Slack using `curl` and
 the secret text credential `slack-webhook-url`. Docker Hub and GitHub
 credentials are also stored in Jenkins and are not committed to this repo.
+
+ArgoCD reads the rendered manifests from the GitOps repo and deploys the app to
+Kubernetes. Prometheus and Grafana are also managed from the GitOps repo.
 
 ## Run locally
 
